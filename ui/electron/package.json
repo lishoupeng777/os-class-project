@@ -1,0 +1,16 @@
+{
+  "name": "vfs-desktop",
+  "version": "1.0.0",
+  "description": "Virtual File System Desktop App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run api\" \"electron .\"",
+    "build": "electron-builder"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^27.0.0"
+  }
+}

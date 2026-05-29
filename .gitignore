@@ -1,0 +1,25 @@
+# 编译输出
+bin/
+*.exe
+*.o
+*.obj
+
+# 虚拟磁盘文件
+virtual_disk.bin
+
+# 编辑器配置
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node.js 依赖
+ui/electron/node_modules/
+
+# 测试临时文件
+test_input.txt
+test_repro.c
+
+# 系统文件
+Thumbs.db
+.DS_Store
