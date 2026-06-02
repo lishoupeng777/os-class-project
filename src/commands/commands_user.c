@@ -47,6 +47,21 @@ void cmd_whoami(char *arg) {
     printf("uid=%d(%s) gid=%d\n", current_user->u_uid, current_user->u_name, current_user->u_gid);
 }
 
+void cmd_users(char *arg) {
+    (void)arg;
+    if (current_user == NULL) {
+        printf("Please login first!\n");
+        return;
+    }
+
+    printf("UID   GID   USERNAME\n");
+    printf("---------------------\n");
+    for (int i = 0; i < user_count; i++) {
+        printf("%-5d %-5d %s\n", users[i].u_uid, users[i].u_gid, users[i].u_name);
+    }
+    printf("Total users: %d\n", user_count);
+}
+
 void cmd_useradd(char *arg) {
     if (current_user == NULL || current_user->u_uid != 0) {
         printf("Only root can add users!\n");

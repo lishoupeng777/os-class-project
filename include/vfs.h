@@ -142,6 +142,7 @@ int alloc_block(minode *mip, int offset);
 char *get_cwd_path(char *buf, int size);
 
 void cmd_format(char *arg);
+void cmd_sbinfo(char *arg);
 void cmd_login(char *arg);
 void cmd_logout(char *arg);
 void cmd_mkdir(char *arg);
@@ -163,6 +164,7 @@ void cmd_chown(char *arg);
 void cmd_useradd(char *arg);
 void cmd_userdel(char *arg);
 void cmd_whoami(char *arg);
+void cmd_users(char *arg);
 void cmd_stat(char *arg);
 void cmd_rename(char *arg);
 void cmd_passwd(char *arg);

@@ -3,9 +3,11 @@
 void print_help() {
     printf("\n=== Simulated UNIX Filesystem Command List ===\n");
     printf("format          - Format virtual disk\n");
+    printf("sbinfo [blkno]  - Show super block free-stack info (optional block dump)\n");
     printf("login           - User login\n");
     printf("logout          - User logout\n");
     printf("whoami          - Display current user\n");
+    printf("users           - List all users\n");
     printf("useradd <name>  - Add new user\n");
     printf("userdel <name>  - Delete user\n");
     printf("passwd [user]   - Change password (no arg: own; arg: root changes user)\n");
@@ -73,12 +75,16 @@ int main() {
 
         if (strcmp(cmd, "format") == 0) {
             cmd_format(arg);
+        } else if (strcmp(cmd, "sbinfo") == 0) {
+            cmd_sbinfo(arg);
         } else if (strcmp(cmd, "login") == 0) {
             cmd_login(arg);
         } else if (strcmp(cmd, "logout") == 0) {
             cmd_logout(arg);
         } else if (strcmp(cmd, "whoami") == 0) {
             cmd_whoami(arg);
+        } else if (strcmp(cmd, "users") == 0) {
+            cmd_users(arg);
         } else if (strcmp(cmd, "useradd") == 0) {
             cmd_useradd(arg);
         } else if (strcmp(cmd, "userdel") == 0) {
