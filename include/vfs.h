@@ -155,6 +155,7 @@ void cmd_read(char *arg);
 void cmd_write(char *arg);
 void cmd_delete(char *arg);
 void cmd_copy(char *arg);
+void cmd_import(char *arg);
 void cmd_link(char *arg);
 void cmd_pwd(char *arg);
 void cmd_touch(char *arg);

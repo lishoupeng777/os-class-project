@@ -110,6 +110,106 @@ void cmd_copy(char *arg) {
     printf("File copied successfully!\n");
 }
 
+// import <host_path> <vfs_dest>
+void cmd_import(char *arg) {
+    if (current_user == NULL) {
+        printf("Please login first!\n");
+        return;
+    }
+    if (arg == NULL || *arg == '\0') {
+        printf("Usage: import <host_path> <vfs_dest>\n");
+        return;
+    }
+    char host[MAXPATH];
+    char vfsdest[MAXPATH];
+    if (sscanf(arg, "%s %s", host, vfsdest) != 2) {
+        printf("Invalid arguments. Usage: import <host_path> <vfs_dest>\n");
+        return;
+    }
+
+    FILE *fp = fopen(host, "rb");
+    if (fp == NULL) {
+        printf("Cannot open host file: %s\n", host);
+        return;
+    }
+
+    // read entire file into buffer (limit to available disk size)
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    if (fsize < 0) fsize = 0;
+
+    // create destination file in VFS
+    // reuse create/write logic: allocate inode and write blocks
+    minode *dp = iget(current_user->u_cwd->ino);
+    char dest_name[DIRSIZ];
+    char path_copy[MAXPATH];
+    strncpy(path_copy, vfsdest, MAXPATH-1);
+    path_copy[MAXPATH-1] = '\0';
+    char *p = strrchr(path_copy, '/');
+    minode *target_dir = dp;
+    if (p != NULL) {
+        strncpy(dest_name, p+1, DIRSIZ-1);
+        *p = '\0';
+        if (strlen(path_copy) > 0) {
+            minode *tmp = NULL;
+            if (namei(path_copy, &tmp) != 0) {
+                printf("Destination directory not found: %s\n", path_copy);
+                iput(dp);
+                fclose(fp);
+                return;
+            }
+            target_dir = tmp;
+            iput(dp);
+        }
+    } else {
+        strncpy(dest_name, vfsdest, DIRSIZ-1);
+    }
+    dest_name[DIRSIZ-1] = '\0';
+
+    // allocate inode
+    int ino = ialloc();
+    if (ino < 0) {
+        printf("No free inodes\n");
+        iput(target_dir);
+        fclose(fp);
+        return;
+    }
+    minode *mip = iget(ino);
+    mip->dino.di_mode = S_IFREG | S_IREAD | S_IWRITE;
+    mip->dino.di_uid = current_user->u_uid;
+    mip->dino.di_gid = current_user->u_gid;
+    mip->dino.di_nlink = 1;
+    mip->dino.di_size = 0;
+    memset(mip->dino.di_addr, 0, sizeof(mip->dino.di_addr));
+
+    long offset = 0;
+    char buf[BLOCKSIZ];
+    while (!feof(fp)) {
+        size_t r = fread(buf, 1, BLOCKSIZ, fp);
+        if (r == 0) break;
+        int blk = alloc_block(mip, offset);
+        if (blk < 0) {
+            printf("No free blocks\n");
+            // cleanup: free allocated inode/blocks? keep simple: write what we have
+            break;
+        }
+        memcpy(virtual_disk + DATASTART + blk * BLOCKSIZ, buf, r);
+        offset += r;
+    }
+
+    mip->dino.di_size = (uint32_t)offset;
+    mip->m_flag = 1;
+    iput(mip);
+
+    // add directory entry
+    iname(target_dir, dest_name, &ino);
+    iput(target_dir);
+    fclose(fp);
+
+    printf("Imported %s => %s (size=%ld bytes)\n", host, vfsdest, offset);
+}
+
 void cmd_link(char *arg) {
     if (current_user == NULL) {
         printf("Please login first!\n");

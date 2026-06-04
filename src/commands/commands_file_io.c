@@ -117,6 +117,7 @@ void cmd_create(char *arg) {
     printf("File created successfully!\n");
 }
 
+
 void cmd_open(char *arg) {
     if (current_user == NULL) {
         printf("Please login first!\n");

@@ -18,6 +18,7 @@ void print_help() {
     printf("touch <file>    - Create empty file\n");
     printf("create <file>   - Create file (with write)\n");
     printf("cat <file>      - Display file content\n");
+    printf("import <host> <vfs_dest> - Import host file into VFS\n");
     printf("open <file>     - Open file\n");
     printf("close <fd>      - Close file\n");
     printf("read <fd> <size> - Read file content\n");
@@ -60,13 +61,13 @@ int main() {
         }
         if (fgets(cmd_line, MAXLINE, stdin) == NULL) break;
         
-        cmd_line[strcspn(cmd_line, "\n")] = '\0';
+        cmd_line[strcspn(cmd_line, "\r\n")] = '\0';
         
         memset(cmd, 0, sizeof(cmd));
         memset(arg, 0, sizeof(arg));
         
         if (sscanf(cmd_line, "%s %[^\n]", cmd, arg) == 2) {
-            arg[strcspn(arg, "\n")] = '\0';
+            arg[strcspn(arg, "\r\n")] = '\0';
         } else {
             sscanf(cmd_line, "%s", cmd);
         }
@@ -123,6 +124,8 @@ int main() {
             cmd_chown(arg);
         } else if (strcmp(cmd, "copy") == 0) {
             cmd_copy(arg);
+        } else if (strcmp(cmd, "import") == 0) {
+            cmd_import(arg);
         } else if (strcmp(cmd, "link") == 0) {
             cmd_link(arg);
         } else if (strcmp(cmd, "symlink") == 0) {

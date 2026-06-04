@@ -1,5 +1,29 @@
 #include "vfs.h"
 
+static int get_runtime_root_ino() {
+    if (current_user == NULL || current_user->u_cwd == NULL) {
+        return ROOT_INODE;
+    }
+
+    int ino = current_user->u_cwd->ino;
+    int guard = 0;
+    while (guard++ < 256) {
+        dinode *dip = (dinode *)(virtual_disk + DINODESTART + (ino - 1) * DINODESIZ);
+        int blk = dip->di_addr[0];
+        if (blk <= 0) {
+            break;
+        }
+        dir_entry *de = (dir_entry *)(virtual_disk + DATASTART + blk * BLOCKSIZ);
+        int parent = de[1].de_ino;
+        if (parent <= 0 || parent == ino) {
+            return ino;
+        }
+        ino = parent;
+    }
+
+    return ROOT_INODE;
+}
+
 // ============================================================
 // 路径解析与目录操作
 // 负责：namei() / iname() / get_cwd_path()
@@ -23,8 +47,10 @@ int namei(char *path, minode **mip) {
 
     strcpy(tmp, path);
 
+    int root_ino = get_runtime_root_ino();
+
     if (tmp[0] == '/') {
-        cur = iget(ROOT_INODE);
+        cur = iget(root_ino);
         p = tmp + 1;
     } else {
         cur = iget(current_user->u_cwd->ino);
@@ -114,8 +140,10 @@ char *get_cwd_path(char *buf, int size) {
         return buf;
     }
 
+    int root_ino = get_runtime_root_ino();
+
     int cwd_ino = current_user->u_cwd->ino;
-    if (cwd_ino == ROOT_INODE) {
+    if (cwd_ino == root_ino) {
         buf[0] = '/'; buf[1] = '\0';
         return buf;
     }
@@ -126,7 +154,7 @@ char *get_cwd_path(char *buf, int size) {
     int current_ino = cwd_ino;
     int guard = 0;
 
-    while (current_ino != ROOT_INODE && guard < 256) {
+    while (current_ino != root_ino && guard < 256) {
         guard++;
 
         // 直接从磁盘读取当前目录的 dinode
