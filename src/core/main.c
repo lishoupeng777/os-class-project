@@ -12,6 +12,7 @@ void print_help() {
     printf("userdel <name>  - Delete user\n");
     printf("passwd [user]   - Change password (no arg: own; arg: root changes user)\n");
     printf("mkdir <dir>     - Create directory\n");
+    printf("rmdir <dir>     - Remove empty directory\n");
     printf("chdir <dir>     - Change directory\n");
     printf("pwd             - Print working directory\n");
     printf("dir             - List directory contents\n");
@@ -94,6 +95,8 @@ int main() {
             cmd_passwd(arg);
         } else if (strcmp(cmd, "mkdir") == 0) {
             cmd_mkdir(arg);
+        } else if (strcmp(cmd, "rmdir") == 0) {
+            cmd_rmdir(arg);
         } else if (strcmp(cmd, "chdir") == 0) {
             cmd_chdir(arg);
         } else if (strcmp(cmd, "pwd") == 0) {

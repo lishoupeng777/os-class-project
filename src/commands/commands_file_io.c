@@ -1,5 +1,8 @@
 #include "vfs.h"
 
+// is_valid_name 定义在 commands_dir.c 中，此处 extern 引用
+extern int is_valid_name(const char *name);
+
 void cmd_create(char *arg) {
     if (current_user == NULL) {
         printf("Please login first!\n");
@@ -14,6 +17,11 @@ void cmd_create(char *arg) {
     char filename[DIRSIZ];
     strncpy(filename, arg, DIRSIZ - 1);
     filename[DIRSIZ - 1] = '\0';
+    
+    if (!is_valid_name(filename)) {
+        printf("Invalid filename!\n");
+        return;
+    }
     
     minode *dp = iget(current_user->u_cwd->ino);
     
@@ -400,25 +408,31 @@ void cmd_delete(char *arg) {
     for (int i = 0; i < NADDR; i++) {
         if (mip->dino.di_addr[i] != 0) {
             if (i < 8) {
-                bfree(mip->dino.di_addr[i]);
+                if (mip->dino.di_addr[i] >= 0 && mip->dino.di_addr[i] < FILEBLK) {
+                    bfree(mip->dino.di_addr[i]);
+                }
             } else if (i == 8) {
-                int *indirect = (int *)(virtual_disk + DATASTART + mip->dino.di_addr[i] * BLOCKSIZ);
-                for (int j = 0; j < indirect_blocks; j++) {
-                    if (indirect[j] != 0) bfree(indirect[j]);
-                }
-                bfree(mip->dino.di_addr[i]);
-            } else if (i == 9) {
-                int *dbl_indirect = (int *)(virtual_disk + DATASTART + mip->dino.di_addr[i] * BLOCKSIZ);
-                for (int j = 0; j < indirect_blocks; j++) {
-                    if (dbl_indirect[j] != 0) {
-                        int *indirect = (int *)(virtual_disk + DATASTART + dbl_indirect[j] * BLOCKSIZ);
-                        for (int k = 0; k < indirect_blocks; k++) {
-                            if (indirect[k] != 0) bfree(indirect[k]);
-                        }
-                        bfree(dbl_indirect[j]);
+                if (mip->dino.di_addr[i] >= 0 && mip->dino.di_addr[i] < FILEBLK) {
+                    int *indirect = (int *)(virtual_disk + DATASTART + mip->dino.di_addr[i] * BLOCKSIZ);
+                    for (int j = 0; j < indirect_blocks; j++) {
+                        if (indirect[j] >= 0 && indirect[j] < FILEBLK) bfree(indirect[j]);
                     }
+                    bfree(mip->dino.di_addr[i]);
                 }
-                bfree(mip->dino.di_addr[i]);
+            } else if (i == 9) {
+                if (mip->dino.di_addr[i] >= 0 && mip->dino.di_addr[i] < FILEBLK) {
+                    int *dbl_indirect = (int *)(virtual_disk + DATASTART + mip->dino.di_addr[i] * BLOCKSIZ);
+                    for (int j = 0; j < indirect_blocks; j++) {
+                        if (dbl_indirect[j] >= 0 && dbl_indirect[j] < FILEBLK) {
+                            int *indirect = (int *)(virtual_disk + DATASTART + dbl_indirect[j] * BLOCKSIZ);
+                            for (int k = 0; k < indirect_blocks; k++) {
+                                if (indirect[k] >= 0 && indirect[k] < FILEBLK) bfree(indirect[k]);
+                            }
+                            bfree(dbl_indirect[j]);
+                        }
+                    }
+                    bfree(mip->dino.di_addr[i]);
+                }
             }
             mip->dino.di_addr[i] = 0;
         }
@@ -468,6 +482,11 @@ void cmd_touch(char *arg) {
     char filename[DIRSIZ];
     strncpy(filename, arg, DIRSIZ - 1);
     filename[DIRSIZ - 1] = '\0';
+    
+    if (!is_valid_name(filename)) {
+        printf("Invalid filename!\n");
+        return;
+    }
     
     minode *dp = iget(current_user->u_cwd->ino);
     

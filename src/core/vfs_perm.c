@@ -66,7 +66,11 @@ int alloc_block(minode *mip, int offset) {
     if (blkno < 8) {
         addr_idx = blkno;
         if (mip->dino.di_addr[addr_idx] == 0) {
-            mip->dino.di_addr[addr_idx] = balloc();
+            int new_blk = balloc();
+            if (new_blk < 0) {
+                return -1;
+            }
+            mip->dino.di_addr[addr_idx] = new_blk;
             mip->m_flag = 1;
         }
         return mip->dino.di_addr[addr_idx];
@@ -78,7 +82,11 @@ int alloc_block(minode *mip, int offset) {
         addr_idx = 8;
 
         if (mip->dino.di_addr[addr_idx] == 0) {
-            mip->dino.di_addr[addr_idx] = balloc();
+            int indirect_blk = balloc();
+            if (indirect_blk < 0) {
+                return -1;
+            }
+            mip->dino.di_addr[addr_idx] = indirect_blk;
             mip->m_flag = 1;
             int *indirect = (int *)(virtual_disk + DATASTART + mip->dino.di_addr[addr_idx] * BLOCKSIZ);
             memset(indirect, 0, BLOCKSIZ);
@@ -86,7 +94,11 @@ int alloc_block(minode *mip, int offset) {
 
         int *indirect = (int *)(virtual_disk + DATASTART + mip->dino.di_addr[addr_idx] * BLOCKSIZ);
         if (indirect[blkno] == 0) {
-            indirect[blkno] = balloc();
+            int new_blk = balloc();
+            if (new_blk < 0) {
+                return -1;
+            }
+            indirect[blkno] = new_blk;
             mip->m_flag = 1;
         }
         return indirect[blkno];
@@ -99,7 +111,11 @@ int alloc_block(minode *mip, int offset) {
     addr_idx = 9;
 
     if (mip->dino.di_addr[addr_idx] == 0) {
-        mip->dino.di_addr[addr_idx] = balloc();
+        int dbl_blk = balloc();
+        if (dbl_blk < 0) {
+            return -1;
+        }
+        mip->dino.di_addr[addr_idx] = dbl_blk;
         mip->m_flag = 1;
         int *dbl_indirect = (int *)(virtual_disk + DATASTART + mip->dino.di_addr[addr_idx] * BLOCKSIZ);
         memset(dbl_indirect, 0, BLOCKSIZ);
@@ -107,7 +123,11 @@ int alloc_block(minode *mip, int offset) {
 
     int *dbl_indirect = (int *)(virtual_disk + DATASTART + mip->dino.di_addr[addr_idx] * BLOCKSIZ);
     if (dbl_indirect[first_idx] == 0) {
-        dbl_indirect[first_idx] = balloc();
+        int indirect_blk = balloc();
+        if (indirect_blk < 0) {
+            return -1;
+        }
+        dbl_indirect[first_idx] = indirect_blk;
         mip->m_flag = 1;
         int *indirect = (int *)(virtual_disk + DATASTART + dbl_indirect[first_idx] * BLOCKSIZ);
         memset(indirect, 0, BLOCKSIZ);
@@ -115,7 +135,11 @@ int alloc_block(minode *mip, int offset) {
 
     int *indirect = (int *)(virtual_disk + DATASTART + dbl_indirect[first_idx] * BLOCKSIZ);
     if (indirect[second_idx] == 0) {
-        indirect[second_idx] = balloc();
+        int new_blk = balloc();
+        if (new_blk < 0) {
+            return -1;
+        }
+        indirect[second_idx] = new_blk;
         mip->m_flag = 1;
     }
     return indirect[second_idx];

@@ -1,5 +1,15 @@
 #include "vfs.h"
 
+// 校验文件名/目录名是否合法：不能为空、不能含 '/'、不能是 "." 或 ".."
+int is_valid_name(const char *name) {
+    if (name == NULL || *name == '\0') return 0;
+    if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) return 0;
+    for (const char *p = name; *p; p++) {
+        if (*p == '/') return 0;
+    }
+    return 1;
+}
+
 void cmd_mkdir(char *arg) {
     if (current_user == NULL) {
         printf("Please login first!\n");
@@ -14,6 +24,11 @@ void cmd_mkdir(char *arg) {
     char dirname[DIRSIZ];
     strncpy(dirname, arg, DIRSIZ - 1);
     dirname[DIRSIZ - 1] = '\0';
+    
+    if (!is_valid_name(dirname)) {
+        printf("Invalid directory name!\n");
+        return;
+    }
     
     minode *dp = iget(current_user->u_cwd->ino);
     
@@ -137,6 +152,129 @@ void cmd_dir(char *arg) {
     printf("\n");
     
     iput(dp);
+}
+
+void cmd_rmdir(char *arg) {
+    if (current_user == NULL) {
+        printf("Please login first!\n");
+        return;
+    }
+    
+    if (arg == NULL || *arg == '\0') {
+        printf("Please enter directory name!\n");
+        return;
+    }
+    
+    minode *target = NULL;
+    if (namei(arg, &target) != 0) {
+        printf("Directory not found!\n");
+        return;
+    }
+    
+    if ((target->dino.di_mode & S_IFDIR) == 0) {
+        printf("Not a directory!\n");
+        iput(target);
+        return;
+    }
+    
+    // 禁止删除 . 和 ..
+    char dirname[DIRSIZ];
+    strncpy(dirname, arg, DIRSIZ - 1);
+    dirname[DIRSIZ - 1] = '\0';
+    if (strcmp(dirname, ".") == 0 || strcmp(dirname, "..") == 0) {
+        printf("Cannot delete '.' or '..'!\n");
+        iput(target);
+        return;
+    }
+    
+    // 禁止删除根目录
+    if (target->ino == ROOT_INODE) {
+        printf("Cannot delete root directory!\n");
+        iput(target);
+        return;
+    }
+    
+    // 检查目录是否为空（只有 . 和 ..）
+    int blk = target->dino.di_addr[0];
+    if (blk > 0) {
+        dir_entry *de = (dir_entry *)(virtual_disk + DATASTART + blk * BLOCKSIZ);
+        for (int i = 2; i < DIRNUM; i++) { // 从索引2开始跳过 . 和 ..
+            if (de[i].de_ino != 0) {
+                printf("Directory not empty!\n");
+                iput(target);
+                return;
+            }
+        }
+    }
+    
+    // 检查目录是否在系统打开文件表中被使用
+    for (int i = 0; i < SYSOPENFILE; i++) {
+        if (sys_ofile[i].of_minode != NULL &&
+            sys_ofile[i].of_minode->ino == target->ino &&
+            sys_ofile[i].of_count > 0) {
+            printf("Error: Directory is currently open!\n");
+            iput(target);
+            return;
+        }
+    }
+    
+    // 获取父目录
+    dir_entry *target_de = (dir_entry *)(virtual_disk + DATASTART + blk * BLOCKSIZ);
+    int parent_ino = target_de[1].de_ino; // ".." 指向父目录
+    minode *parent = iget(parent_ino);
+    
+    if (parent == NULL) {
+        printf("Error: Cannot access parent directory!\n");
+        iput(target);
+        return;
+    }
+    
+    if (access(parent, O_WRONLY) != 0) {
+        printf("Permission denied!\n");
+        iput(target);
+        iput(parent);
+        return;
+    }
+    
+    // 在父目录中查找并删除对应的目录项
+    dir_entry *pde = (dir_entry *)(virtual_disk + DATASTART + parent->dino.di_addr[0] * BLOCKSIZ);
+    int found_idx = -1;
+    int last_idx = -1;
+    for (int i = 0; i < DIRNUM; i++) {
+        if (pde[i].de_ino == 0) { last_idx = i; break; }
+        last_idx = i + 1;
+        if (pde[i].de_ino == target->ino) found_idx = i;
+    }
+    
+    if (found_idx < 0) {
+        printf("Error: Directory entry not found in parent!\n");
+        iput(target);
+        iput(parent);
+        return;
+    }
+    
+    // 释放目录的数据块
+    if (blk > 0) {
+        bfree(blk);
+    }
+    
+    // 释放 inode
+    int deleted_ino = target->ino;
+    iput(target);
+    ifree(deleted_ino);
+    
+    // 删除父目录中的目录项（压缩空洞）
+    for (int i = found_idx; i < last_idx - 1; i++) {
+        pde[i] = pde[i + 1];
+    }
+    pde[last_idx - 1].de_ino = 0;
+    pde[last_idx - 1].de_name[0] = '\0';
+    parent->dino.di_size -= sizeof(dir_entry);
+    parent->dino.di_nlink--;
+    parent->m_flag = 1;
+    iput(parent);
+    
+    printf("Directory removed successfully!\n");
 }
 
 void cmd_pwd(char *arg) {

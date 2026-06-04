@@ -168,6 +168,7 @@ void cmd_whoami(char *arg);
 void cmd_users(char *arg);
 void cmd_stat(char *arg);
 void cmd_rename(char *arg);
+void cmd_rmdir(char *arg);
 void cmd_passwd(char *arg);
 void cmd_symlink(char *arg);
 
