@@ -43,7 +43,9 @@ void cmd_create(char *arg) {
     
     int ino = ialloc();
     minode *new_file = iget(ino);
-    new_file->dino.di_mode = S_IFREG | S_IREAD | S_IWRITE;
+    new_file->dino.di_mode = S_IFREG | S_IREAD | S_IWRITE
+                           | (S_IREAD >> 3) | (S_IWRITE >> 3)
+                           | (S_IREAD >> 6) | (S_IWRITE >> 6);
     new_file->dino.di_nlink = 1;
     new_file->dino.di_uid = current_user->u_uid;
     new_file->dino.di_gid = current_user->u_gid;
@@ -508,7 +510,9 @@ void cmd_touch(char *arg) {
     
     int ino = ialloc();
     minode *new_file = iget(ino);
-    new_file->dino.di_mode = S_IFREG | S_IREAD | S_IWRITE;
+    new_file->dino.di_mode = S_IFREG | S_IREAD | S_IWRITE
+                           | (S_IREAD >> 3) | (S_IWRITE >> 3)
+                           | (S_IREAD >> 6) | (S_IWRITE >> 6);
     new_file->dino.di_nlink = 1;
     new_file->dino.di_uid = current_user->u_uid;
     new_file->dino.di_gid = current_user->u_gid;

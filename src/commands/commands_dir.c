@@ -50,7 +50,9 @@ void cmd_mkdir(char *arg) {
     
     int ino = ialloc();
     minode *new_dir = iget(ino);
-    new_dir->dino.di_mode = S_IFDIR | S_IREAD | S_IWRITE | S_IEXEC;
+    new_dir->dino.di_mode = S_IFDIR | S_IREAD | S_IWRITE | S_IEXEC
+                          | (S_IREAD >> 3) | (S_IWRITE >> 3) | (S_IEXEC >> 3)
+                          | (S_IREAD >> 6) | (S_IWRITE >> 6) | (S_IEXEC >> 6);
     new_dir->dino.di_nlink = 2;
     new_dir->dino.di_uid = current_user->u_uid;
     new_dir->dino.di_gid = current_user->u_gid;
@@ -195,17 +197,14 @@ void cmd_rmdir(char *arg) {
     }
     
     // 检查目录是否为空（只有 . 和 ..）
-    int blk = target->dino.di_addr[0];
-    if (blk > 0) {
-        dir_entry *de = (dir_entry *)(virtual_disk + DATASTART + blk * BLOCKSIZ);
-        for (int i = 2; i < DIRNUM; i++) { // 从索引2开始跳过 . 和 ..
-            if (de[i].de_ino != 0) {
-                printf("Directory not empty!\n");
-                iput(target);
-                return;
-            }
-        }
+    // 目录大小按实际目录项数量维护，避免把块内未使用区域当成有效项。
+    if (target->dino.di_size > 2 * sizeof(dir_entry)) {
+        printf("Directory not empty!\n");
+        iput(target);
+        return;
     }
+
+    int blk = target->dino.di_addr[0];
     
     // 检查目录是否在系统打开文件表中被使用
     for (int i = 0; i < SYSOPENFILE; i++) {

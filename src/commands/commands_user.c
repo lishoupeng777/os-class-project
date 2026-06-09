@@ -5,36 +5,36 @@ void cmd_chmod(char *arg) {
         printf("Please login first!\n");
         return;
     }
-    
+
     if (arg == NULL || *arg == '\0') {
         printf("Please enter mode and filename!\n");
         return;
     }
-    
+
     int mode;
     char filename[MAXPATH];
     if (sscanf(arg, "%o %s", &mode, filename) != 2) {
         printf("Invalid argument format!\n");
         return;
     }
-    
+
     minode *mip = NULL;
     if (namei(filename, &mip) != 0) {
         printf("File not found!\n");
         return;
     }
-    
+
     if (current_user->u_uid != 0 && current_user->u_uid != mip->dino.di_uid) {
         printf("Permission denied! Only owner or root can change permissions.\n");
         iput(mip);
         return;
     }
-    
+
     uint16_t file_type = mip->dino.di_mode & 0xF000;
     mip->dino.di_mode = file_type | (mode & 0x0FFF);
     mip->m_flag = 1;
     iput(mip);
-    
+
     printf("Permissions changed successfully!\n");
 }
 
@@ -97,7 +97,8 @@ void cmd_useradd(char *arg) {
     strcpy(users[user_count].u_name, username);
     strcpy(users[user_count].u_passwd, passwd);
     users[user_count].u_uid = user_count;
-    users[user_count].u_gid = user_count;
+    // root (uid=0) 独自分组 gid=0，所有其他用户共享组 gid=1
+    users[user_count].u_gid = (user_count == 0) ? 0 : 1;
     memset(users[user_count].u_ofile, -1, sizeof(users[user_count].u_ofile));
     
     // 创建用户的家目录 /home/username
@@ -114,7 +115,8 @@ void cmd_useradd(char *arg) {
     }
     iput(root);
     
-    int user_home_ino = create_subdir(home_ino, username, user_count, user_count);
+    int user_home_ino = create_subdir(home_ino, username, user_count, 
+                                       (user_count == 0) ? 0 : 1);
     if (user_home_ino > 0) {
         users[user_count].u_cwd = iget(user_home_ino);
         printf("  Home directory /home/%s created\n", username);
@@ -237,33 +239,34 @@ void cmd_chown(char *arg) {
         printf("Please login first!\n");
         return;
     }
-    
+
     if (current_user->u_uid != 0) {
         printf("Permission denied! Only root can change file ownership.\n");
         return;
     }
-    
+
     if (arg == NULL || *arg == '\0') {
         printf("Please enter uid and filename!\n");
         return;
     }
-    
+
     int uid;
     char filename[MAXPATH];
     if (sscanf(arg, "%d %s", &uid, filename) != 2) {
         printf("Invalid argument format!\n");
         return;
     }
-    
+
     minode *mip = NULL;
     if (namei(filename, &mip) != 0) {
         printf("File not found!\n");
         return;
     }
-    
+
     mip->dino.di_uid = (uint8_t)uid;
     mip->m_flag = 1;
     iput(mip);
-    
+
     printf("Ownership changed successfully!\n");
 }
+

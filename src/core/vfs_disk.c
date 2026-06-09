@@ -185,8 +185,9 @@ static void init_super_block() {
     sb->fsize = FILEBLK;
     sb->s_modified = 1;
 
+    // ifree 栈：把 1 放在栈顶（ifree_ptr=49处），这样第一次 ialloc 拿到 ino=1
     for (int i = 0; i < NICINOD; i++) {
-        sb->ifree[i] = i + 1;
+        sb->ifree[i] = NICINOD - i;
     }
     sb->ifree_num = NICINOD;
     sb->ifree_ptr = NICINOD - 1;

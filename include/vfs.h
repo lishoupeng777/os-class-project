@@ -160,8 +160,6 @@ void cmd_link(char *arg);
 void cmd_pwd(char *arg);
 void cmd_touch(char *arg);
 void cmd_cat(char *arg);
-void cmd_chmod(char *arg);
-void cmd_chown(char *arg);
 void cmd_useradd(char *arg);
 void cmd_userdel(char *arg);
 void cmd_whoami(char *arg);
@@ -169,6 +167,8 @@ void cmd_users(char *arg);
 void cmd_stat(char *arg);
 void cmd_rename(char *arg);
 void cmd_rmdir(char *arg);
+void cmd_chmod(char *arg);
+void cmd_chown(char *arg);
 void cmd_passwd(char *arg);
 void cmd_symlink(char *arg);
 

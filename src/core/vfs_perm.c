@@ -14,18 +14,11 @@
 int access(minode *mip, int mode) {
     if (current_user == NULL) return -1;
 
-    // root (uid=0) 绕过所有权限检查
-    if (current_user->u_uid == 0) return 0;
-
     uint16_t perm = mip->dino.di_mode;
     // 三级权限模型：
     //   位 8-10 (0o0700): 所有者权限
     //   位 5-7  (0o0070): 同组权限
     //   位 2-4  (0o0007): 其他用户权限
-    //
-    // S_IREAD  = 0x0100 (位 8, 所有者读)
-    // S_IWRITE = 0x0080 (位 7, 所有者写)
-    // S_IEXEC  = 0x0040 (位 6, 所有者执行)
 
     // 所有者检查
     if (current_user->u_uid == mip->dino.di_uid) {
@@ -35,7 +28,7 @@ int access(minode *mip, int mode) {
         return 0;
     }
 
-    // 同组检查（权限位右移 3）
+    // 同组检查
     if (current_user->u_gid == mip->dino.di_gid) {
         if ((mode & O_RDONLY) && !(perm & (S_IREAD >> 3))) return -1;
         if ((mode & O_WRONLY) && !(perm & (S_IWRITE >> 3))) return -1;
@@ -43,7 +36,7 @@ int access(minode *mip, int mode) {
         return 0;
     }
 
-    // 其他用户检查（权限位右移 6）
+    // 其他用户检查
     if ((mode & O_RDONLY) && !(perm & (S_IREAD >> 6))) return -1;
     if ((mode & O_WRONLY) && !(perm & (S_IWRITE >> 6))) return -1;
     if ((mode & O_RDWR) && !((perm & (S_IREAD >> 6)) && (perm & (S_IWRITE >> 6)))) return -1;

@@ -11,19 +11,76 @@ void cmd_sbinfo(char *arg) {
         return;
     }
 
-    printf("=== Super Block Info ===\n");
-    printf("isize=%d, fsize=%d\n", sb->isize, sb->fsize);
-    printf("ifree_num=%d, ifree_ptr=%d\n", sb->ifree_num, sb->ifree_ptr);
-    printf("ffree_num=%d, ffree_ptr=%d\n", sb->ffree_num, sb->ffree_ptr);
-    printf("s_modified=%d\n", sb->s_modified);
+    printf("========================================\n");
+    printf("      Virtual Disk Layout Info\n");
+    printf("========================================\n");
+    printf("Block size          : %d bytes\n", BLOCKSIZ);
+    printf("Disk total size     : %d MB (%d bytes)\n", DISK_SIZE / (1024*1024), DISK_SIZE);
 
-    printf("\nCurrent free-block stack (top -> bottom):\n");
+    printf("\n--- Block Allocation ---\n");
+    printf("  Block 0            : Boot block (reserved)\n");
+    printf("  Block 1            : Super block\n");
+    printf("  Blocks 2~%d       : Inode table (%d blocks, %d inodes)\n",
+           1 + DINODEBLK, DINODEBLK, DINODEBLK * BLOCKSIZ / DINODESIZ);
+    printf("  Blocks %d~%d     : Data blocks (%d blocks)\n",
+           1 + DINODEBLK + 1, 1 + DINODEBLK + FILEBLK, FILEBLK);
+
+    printf("\n========================================\n");
+    printf("      Super Block Info\n");
+    printf("========================================\n");
+    printf("  isize (Inode tbl blks) : %d\n", sb->isize);
+    printf("  fsize (Data blks)      : %d\n", sb->fsize);
+    printf("  s_modified             : %d\n", sb->s_modified);
+
+    printf("\n--- Free Inodes ---\n");
+    printf("  ifree_num (free)       : %d\n", sb->ifree_num);
+    printf("  ifree_ptr              : %d\n", sb->ifree_ptr);
+    printf("  Stack content (top -> bottom):\n");
+    if (sb->ifree_ptr < 0) {
+        printf("    <empty>\n");
+    } else {
+        for (int i = sb->ifree_ptr; i >= 0; i--) {
+            printf("    [%2d] %d\n", i, sb->ifree[i]);
+        }
+    }
+
+    printf("\n--- Free Data Blocks ---\n");
+    printf("  ffree_num (in stack)   : %d\n", sb->ffree_num);
+    printf("  ffree_ptr              : %d\n", sb->ffree_ptr);
+    printf("  Stack content (top -> bottom):\n");
     if (sb->ffree_ptr < 0) {
-        printf("  <empty>\n");
+        printf("    <empty>\n");
     } else {
         for (int i = sb->ffree_ptr; i >= 0; i--) {
-            printf("  [%2d] %d\n", i, sb->ffree[i]);
+            printf("    [%2d] %d\n", i, sb->ffree[i]);
         }
+    }
+
+    // 估算成组链接中的空闲块总数
+    // 当前栈中已有 ffree_num 个，分组链表中每块存 50 个
+    int total_avail_approx = sb->ffree_num;
+    // 尝试追踪分组链表来汇总全部空闲块
+    {
+        int *dp = (int *)(virtual_disk + DATASTART);
+        int group_blocks = 0;
+        int chain_len = 0;
+        for (int i = 0; i < FILEBLK; i++) {
+            if (dp[i * (BLOCKSIZ / sizeof(int)) + NICFREE] == -1) {
+                int cnt = 0;
+                for (int j = 0; j < NICFREE; j++) {
+                    if (dp[i * (BLOCKSIZ / sizeof(int)) + j] != -1) cnt++;
+                    else break;
+                }
+                group_blocks += cnt;
+                chain_len++;
+            }
+        }
+        printf("\n  Grouped-link chains    : %d block(s)\n", chain_len);
+        printf("  Blocks in chains       : ~%d\n", group_blocks);
+        printf("  Estimated total free   : ~%d / %d\n",
+               total_avail_approx + group_blocks, FILEBLK);
+        printf("  Used blocks            : ~%d\n",
+               FILEBLK - (total_avail_approx + group_blocks));
     }
 
     if (arg == NULL || *arg == '\0') {

@@ -14,6 +14,8 @@ void print_help() {
     printf("mkdir <dir>     - Create directory\n");
     printf("rmdir <dir>     - Remove empty directory\n");
     printf("chdir <dir>     - Change directory\n");
+    printf("chmod <mode> <file> - Change file permissions\n");
+    printf("chown <uid> <file> - Change file owner (root only)\n");
     printf("pwd             - Print working directory\n");
     printf("dir             - List directory contents\n");
     printf("touch <file>    - Create empty file\n");
@@ -26,8 +28,6 @@ void print_help() {
     printf("write <fd>      - Write to file\n");
     printf("delete <file>   - Delete file\n");
     printf("rename <old> <new> - Rename file\n");
-    printf("chmod <mode> <file> - Change file permissions\n");
-    printf("chown <uid> <file> - Change file owner (root only)\n");
     printf("copy <src> <dest> - Copy file\n");
     printf("link <src> <dest> - Create hard link\n");
     printf("symlink <target> <link> - Create symbolic link\n");
